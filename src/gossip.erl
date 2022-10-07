@@ -9,8 +9,8 @@
   setGossipOrPushSum/2, initializeGossip/1, performGossipRecursively/2,
   createFullTopology/1, createLineTopology/1
 ]).
--export([getIndex/1, getRumourCount/1, getNeighbors/1, getXCoordinate/1, getYCoordinate/1]).
--export([updateIndex/2, updateRumourCount/2, updateNeighbors/2, updateXCoordinate/2, updateYCoordinate/2]).
+-export([getIndex/1, getRumourCount/1, getNeighbors/1, getXCoordinate/1, getYCoordinate/1, getSum/1, getWeight/1]).
+-export([updateIndex/2, updateRumourCount/2, updateNeighbors/2, updateXCoordinate/2, updateYCoordinate/2, updateSum/2, updateWeight/2]).
 
 -define(SERVER, ?MODULE).
 
@@ -22,7 +22,7 @@ start_link() ->
   Pid.
 
 init([]) ->
-  {ok, {0,0,[],0,0,1}}.
+  {ok, {0,0,[],0,0,0,1}}.
 
 getIndex(Pid) ->
   gen_server:call(Pid, {getIndex, []}).
@@ -39,6 +39,12 @@ getXCoordinate(Pid) ->
 getYCoordinate(Pid) ->
   gen_server:call(Pid, {getYCoordinate, []}).
 
+getSum(Pid) ->
+  gen_server:call(Pid, {getSum, []}).
+
+getWeight(Pid) ->
+  gen_server:call(Pid, {getWeight, []}).
+
 updateIndex(Pid, Index) ->
   gen_server:call(Pid, {updateIndex, Index}).
 
@@ -52,35 +58,49 @@ updateXCoordinate(Pid, XCoordinate) ->
   gen_server:call(Pid, {updateXCoordinate, XCoordinate}).
 
 updateYCoordinate(Pid, YCoordinate) ->
-  gen_server:call(Pid, {updateXCoordinate, YCoordinate}).
+  gen_server:call(Pid, {updateYCoordinate, YCoordinate}).
+
+updateSum(Pid, Sum) ->
+  gen_server:call(Pid, {updateSum, Sum}).
+
+updateWeight(Pid, Weight) ->
+  gen_server:call(Pid, {updateWeight, Weight}).
 
 handle_call({getIndex, []}, _, State) ->
-  {Index, _, _, _, _, _} = State,
+  {Index, _, _, _, _, _, _} = State,
   {reply, Index, State};
 
 handle_call({getRumourCount, []}, _, State) ->
-  {_, RumourCount, _, _, _, _} = State,
+  {_, RumourCount, _, _, _, _, _} = State,
   {reply, RumourCount, State};
 
 handle_call({getNeighbors, []}, _, State) ->
-  {_, _, NeighborNodes, _, _, _} = State,
+  {_, _, NeighborNodes, _, _, _, _} = State,
   {reply, NeighborNodes, State};
 
 handle_call({getXCoordinate, []}, _, State) ->
-  {_, _, _, XCoordinate, _, _} = State,
+  {_, _, _, XCoordinate, _, _, _} = State,
   {reply, XCoordinate, State};
 
 handle_call({getYCoordinate, []}, _, State) ->
-  {_, _, _, _, YCoordinate, _} = State,
+  {_, _, _, _, YCoordinate, _, _} = State,
   {reply, YCoordinate, State};
 
+handle_call({getSum, []}, _, State) ->
+  {_, _, _, _, _, Sum, _} = State,
+  {reply, Sum, State};
+
+handle_call({getWeight, []}, _, State) ->
+  {_, _, _, _, _, _, Weight} = State,
+  {reply, Weight, State};
+
 handle_call({updateIndex, NewIndex}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight} = State,
-  NewState = {NewIndex, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight},
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
+  NewState = {NewIndex, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight},
   {reply, Index, NewState};
 
 handle_call({updateRumourCount, Pid, NodeList}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight} = State,
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
   [{_, TotalCount}] = ets:lookup(my_table,finishedNodeCount),
   if
     TotalCount == length(NodeList) ->
@@ -89,25 +109,35 @@ handle_call({updateRumourCount, Pid, NodeList}, _, State) ->
       exit(Pid, normal);
     true ->
       NewRumourCount = RumourCount + 1,
-      NewState = {Index, NewRumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight},
+      NewState = {Index, NewRumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight},
       {reply, NewRumourCount, NewState}
   end;
 
 handle_call({updateNeighbors, NewNeighbors}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight} = State,
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
   UpdatedNeighborsList = NeighborNodes ++ [NewNeighbors],
-  NewState = {Index, RumourCount, UpdatedNeighborsList, XCoordinate, YCoordinate, Weight},
+  NewState = {Index, RumourCount, UpdatedNeighborsList, XCoordinate, YCoordinate, Sum, Weight},
   {reply, Index, NewState};
 
 handle_call({updateXCoordinate, NewXCoordinate}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight} = State,
-  NewState = {Index, RumourCount, NeighborNodes, NewXCoordinate, YCoordinate, Weight},
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
+  NewState = {Index, RumourCount, NeighborNodes, NewXCoordinate, YCoordinate, Sum, Weight},
   {reply, XCoordinate, NewState};
 
 handle_call({updateYCoordinate, NewYCoordinate}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Weight} = State,
-  NewState = {Index, RumourCount, NeighborNodes, XCoordinate, NewYCoordinate, Weight},
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
+  NewState = {Index, RumourCount, NeighborNodes, XCoordinate, NewYCoordinate, Sum, Weight},
   {reply, YCoordinate, NewState};
+
+handle_call({updateSum, NewSum}, _, State) ->
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
+  NewState = {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, NewSum, Weight},
+  {reply, Sum, NewState};
+
+handle_call({updateWeight, NewWeight}, _, State) ->
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
+  NewState = {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, NewWeight},
+  {reply, Weight, NewState};
 
 handle_call(stopProcess, _From, State) ->
   {stop, normal, shutdown_ok, State}.
@@ -131,7 +161,10 @@ startGossipSimulation(NumberOfNodes, RequiredTopology, GossipOrPushSum) ->
     [],
     lists:seq(1, NumberOfNodes)
   ),
+  statistics(wall_clock),
   setTopology(RequiredTopology, NodeList),
+  {_, RunTimeTakenSinceLastCall} = statistics(wall_clock),
+  io:fwrite("Time taken to prepare topology ~p milliseconds ~n", [RunTimeTakenSinceLastCall]),
   setGossipOrPushSum(GossipOrPushSum, NodeList).
 
 setTopology(RequiredTopology, NodeList) ->
@@ -141,9 +174,10 @@ setTopology(RequiredTopology, NodeList) ->
     full ->
       createFullTopology(NodeList);
     twoD ->
-      ok;
+      create2DTopology(NodeList);
     imperfTwoD ->
-      ok
+      create2DTopology(NodeList),
+      addRandomNeighborsToGrid(NodeList)
   end.
 
 setGossipOrPushSum(GossipOrPushSum, NodeList) ->
@@ -151,7 +185,7 @@ setGossipOrPushSum(GossipOrPushSum, NodeList) ->
     gossip ->
       initializeGossip(NodeList);
     pushSum ->
-      ok
+      initializePushSum(NodeList)
   end.
 
 createLineTopology(NodeList) ->
@@ -174,9 +208,7 @@ createLineTopology(NodeList) ->
       )
     end,
   statistics(wall_clock),
-  lists:foreach(Function, NodeList),
-  {_, RunTimeTakenSinceLastCall} = statistics(wall_clock),
-  io:fwrite("Time taken to prepare topology ~p milliseconds ~n", [RunTimeTakenSinceLastCall]).
+  lists:foreach(Function, NodeList).
 
 
 createFullTopology(NodeList) ->
@@ -196,10 +228,63 @@ createFullTopology(NodeList) ->
         NodeList
       )
     end,
-  statistics(wall_clock),
-  lists:foreach(Function, NodeList),
-  {_, RunTimeTakenSinceLastCall} = statistics(wall_clock),
-  io:fwrite("Time taken to prepare topology ~p milliseconds ~n", [RunTimeTakenSinceLastCall]).
+  lists:foreach(Function, NodeList).
+
+create2DTopology(NodeList) ->
+  GridSettingFunction =
+    fun(Pid) ->
+      IndexOfPid = string:str(NodeList, [Pid]),
+      Dividend = IndexOfPid div 4,
+      Remainder = IndexOfPid rem 4,
+      if
+        Remainder =:= 0 ->
+          updateXCoordinate(Pid, Dividend),
+          updateYCoordinate(Pid, Remainder + 4);
+        true ->
+          updateXCoordinate(Pid, Dividend + 1),
+          updateYCoordinate(Pid, Remainder)
+      end
+    end,
+  NeighbourSettingFunction =
+    fun(Pid) ->
+      IndexOfPid = string:str(NodeList, [Pid]),
+      lists:foreach(
+        fun(NeighborToAdd) ->
+          IndexOfInnerNode = string:str(NodeList, [NeighborToAdd]),
+          if
+            IndexOfInnerNode == IndexOfPid ->
+              ok;
+            true ->
+              XofPid = getXCoordinate(Pid),
+              YofPid = getYCoordinate(Pid),
+              XofNeighbour = getXCoordinate(NeighborToAdd),
+              YofNeighbour = getYCoordinate(NeighborToAdd),
+              if
+                (XofPid - 1 > 0) and (XofPid - 1 =:= XofNeighbour) and (YofPid =:= YofNeighbour)->
+                  updateNeighbors(Pid, NeighborToAdd);
+                (XofPid + 1 =< (length(NodeList) / 4)) and (XofPid + 1 =:= XofNeighbour) and (YofPid =:= YofNeighbour) ->
+                  updateNeighbors(Pid, NeighborToAdd);
+                (YofPid - 1 > 0) and (YofPid - 1 =:= YofNeighbour) and (XofPid =:= XofNeighbour)->
+                  updateNeighbors(Pid, NeighborToAdd);
+                (YofPid + 1 =< 4) and (YofPid + 1 =:= YofNeighbour) and (XofPid =:= XofNeighbour)->
+                  updateNeighbors(Pid, NeighborToAdd);
+                true ->
+                  ok
+              end
+          end
+        end,
+        NodeList
+      )
+    end,
+  lists:foreach(GridSettingFunction, NodeList),
+  lists:foreach(NeighbourSettingFunction, NodeList).
+
+addRandomNeighborsToGrid(NodeList) ->
+  Function =
+    fun(Pid) ->
+      updateNeighbors(Pid, lists:nth(rand:uniform(length(NodeList)), NodeList))
+    end,
+  lists:foreach(Function, NodeList).
 
 initializeGossip(NodeList) ->
   statistics(wall_clock),
@@ -209,7 +294,28 @@ initializeGossip(NodeList) ->
   updateRumourCount(RandomNodeToStart, NodeList),
   performGossipRecursively(RandomNodeToStart, NodeList).
 
+initializePushSum(NodeList) ->
+  statistics(wall_clock),
+  RandomNodeToStart = lists:nth(rand:uniform(length(NodeList)), NodeList),
+  ets:new(my_table, [named_table, public, set, {keypos, 1}]),
+  ets:insert(my_table, {finishedNodeCount, 0}),
+  updateRumourCount(RandomNodeToStart, NodeList),
+  performPushSumRecursively(RandomNodeToStart, NodeList).
+
 performGossipRecursively(RandomNode, NodeList) ->
+  CurrentRumourCount = getRumourCount(RandomNode),
+  NeighborsOfNode = getNeighbors(RandomNode),
+  if
+    CurrentRumourCount == 10 ->
+      ets:update_counter(my_table, finishedNodeCount, {2,1});
+    true ->
+      ok
+  end,
+  RandomNeighborNode = lists:nth(rand:uniform(length(NeighborsOfNode)), NeighborsOfNode),
+  updateRumourCount(RandomNeighborNode, NodeList),
+  performGossipRecursively(RandomNeighborNode, NodeList).
+
+performPushSumRecursively(RandomNode, NodeList) ->
   CurrentRumourCount = getRumourCount(RandomNode),
   NeighborsOfNode = getNeighbors(RandomNode),
   if
