@@ -95,8 +95,8 @@ handle_call({getWeight, []}, _, State) ->
   {reply, Weight, State};
 
 handle_call({updateIndex, NewIndex}, _, State) ->
-  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight} = State,
-  NewState = {NewIndex, RumourCount, NeighborNodes, XCoordinate, YCoordinate, Sum, Weight},
+  {Index, RumourCount, NeighborNodes, XCoordinate, YCoordinate, _, Weight} = State,
+  NewState = {NewIndex, RumourCount, NeighborNodes, XCoordinate, YCoordinate, NewIndex, Weight},
   {reply, Index, NewState};
 
 handle_call({updateRumourCount, Pid, NodeList}, _, State) ->
@@ -294,14 +294,6 @@ initializeGossip(NodeList) ->
   updateRumourCount(RandomNodeToStart, NodeList),
   performGossipRecursively(RandomNodeToStart, NodeList).
 
-initializePushSum(NodeList) ->
-  statistics(wall_clock),
-  RandomNodeToStart = lists:nth(rand:uniform(length(NodeList)), NodeList),
-  ets:new(my_table, [named_table, public, set, {keypos, 1}]),
-  ets:insert(my_table, {finishedNodeCount, 0}),
-  updateRumourCount(RandomNodeToStart, NodeList),
-  performPushSumRecursively(RandomNodeToStart, NodeList).
-
 performGossipRecursively(RandomNode, NodeList) ->
   CurrentRumourCount = getRumourCount(RandomNode),
   NeighborsOfNode = getNeighbors(RandomNode),
@@ -315,15 +307,46 @@ performGossipRecursively(RandomNode, NodeList) ->
   updateRumourCount(RandomNeighborNode, NodeList),
   performGossipRecursively(RandomNeighborNode, NodeList).
 
-performPushSumRecursively(RandomNode, NodeList) ->
-  CurrentRumourCount = getRumourCount(RandomNode),
-  NeighborsOfNode = getNeighbors(RandomNode),
+initializePushSum(NodeList) ->
+  statistics(wall_clock),
+  RandomNodeToStart = lists:nth(rand:uniform(length(NodeList)), NodeList),
+  ets:new(my_table, [named_table, public, set, {keypos, 1}]),
+  ets:insert(my_table, {finishedNodeCount, 0}),
+  performPushSumRecursively(RandomNodeToStart, NodeList, 0, 0).
+
+performPushSumRecursively(RandomNode, NodeList, SumToAdd, WeightToAdd) ->
+  Sum = getSum(RandomNode),
+  Weight = getWeight(RandomNode),
+  RumourCount = getRumourCount(RandomNode),
+  Neighbors = getNeighbors(RandomNode),
+  NewSum = Sum + SumToAdd,
+  NewWeight = Weight + WeightToAdd,
+  Difference = abs((NewSum/NewWeight) - (Sum/Weight)),
+  MaxDifference = math:pow(10,-10),
+  SumToPass = NewSum / 2,
+  WeightToPass = NewWeight / 2,
   if
-    CurrentRumourCount == 10 ->
-      ets:update_counter(my_table, finishedNodeCount, {2,1});
+    Difference =< MaxDifference ->
+      updateRumourCount(RandomNode, NodeList),
+      if
+        RumourCount =:= 3 ->
+          ets:update_counter(my_table, finishedNodeCount, {2,1}),
+          [{_, TotalCount}] = ets:lookup(my_table,finishedNodeCount),
+          if
+            TotalCount == length(NodeList) ->
+              {_, RunTimeTakenSinceLastCall} = statistics(wall_clock),
+              io:fwrite("Total count: ~p reached in ~p milliseconds ~n", [TotalCount, RunTimeTakenSinceLastCall]),
+              exit(RandomNode, normal);
+            true ->
+              ok
+          end;
+        true ->
+          ok
+      end;
     true ->
       ok
   end,
-  RandomNeighborNode = lists:nth(rand:uniform(length(NeighborsOfNode)), NeighborsOfNode),
-  updateRumourCount(RandomNeighborNode, NodeList),
-  performGossipRecursively(RandomNeighborNode, NodeList).
+  updateSum(RandomNode, SumToPass),
+  updateWeight(RandomNode, WeightToPass),
+  RandomNeighbor = lists:nth(rand:uniform(length(Neighbors)), Neighbors),
+  performPushSumRecursively(RandomNeighbor, NodeList, SumToPass, WeightToPass).
