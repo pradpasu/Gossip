@@ -175,7 +175,7 @@ setTopology(RequiredTopology, NodeList) ->
       createFullTopology(NodeList);
     twoD ->
       create2DTopology(NodeList);
-    imperfTwoD ->
+    imperf3D ->
       create2DTopology(NodeList),
       addRandomNeighborsToGrid(NodeList)
   end.

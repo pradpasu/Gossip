@@ -60,8 +60,8 @@ Push-Sum: The Push-Sum network works by sending message s and w as parameter to 
     <b>Observations</b>
     <li>Full topology is the fastest to converge and spread the rumor to all its notes.Full topology is connected to all its nodes and convergence is achieved in a very short time.</li>
     <li>Line topology takes the highest amount of time as it has access to only two neighbors ie., left and right node.</li>
-    <li>Imperfect 2D will achieve convergence relatively faster that line and 2D.</li>
-    <li>2D grip converges in between line and imperfect 2D grid as it has access to only its adjacent nodes</li>
+    <li>Imperfect 3D will achieve convergence relatively faster that line and 2D.</li>
+    <li>2D grip converges in between line and imperfect 3D grid as it has access to only its adjacent nodes</li>
 </ul>
 <i>Note: Push Sum can give 100% convergence as we try to reduce the value of s/w ratio till it stop changing for three times consecutively.</i>
 
@@ -130,7 +130,7 @@ Push-Sum:
         <td>3352343</td>
     </tr>
 </table>
-<img src="Gossip Normal Scale.PNG"/>
+<img src="Gossip Normal Scale.PNG"/>>
 <br/>
 <img src="Gossip Log Scale.PNG"/>
 <br/>
@@ -151,5 +151,25 @@ Line algorithm is the topology that takes highest amount of time because of the 
 </li>
 </ol>
 
+****
+
+## Execution Screenshots for 1000 Nodes
+
+<strong>Gossip: </strong>
+<br/>
+<br/>
+<img src="Gossip Line.PNG"/>
+<img src="Gossip TwoD.PNG"/>
+<img src="Gossip 3D.PNG"/>
+<img src="Gossip Full.PNG"/>
+<br/>
+<br/>
+<strong>Push Sum: </strong>
+<br/>
+<br/>
+<img src="Push Sum Line.PNG"/>
+<img src="Push Sum TwoD.PNG"/>
+<img src="Push Sum 3D.PNG"/>
+<img src="Push Sum Full.PNG"/>
 
 
